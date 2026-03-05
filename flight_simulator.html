@@ -1,0 +1,1034 @@
+<!DOCTYPE html>
+<html lang="en">
+<head>
+    <meta charset="UTF-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1.0, user-scalable=no">
+    <title>Sky Horizon - Flight Simulator</title>
+    <style>
+        * {
+            margin: 0;
+            padding: 0;
+            box-sizing: border-box;
+            -webkit-user-select: none;
+            -moz-user-select: none;
+            user-select: none;
+        }
+
+        @import url('https://fonts.googleapis.com/css2?family=Poppins:wght@300;500;700&family=IBM+Plex+Mono:wght@400;600&display=swap');
+
+        html, body {
+            width: 100%;
+            height: 100%;
+            overflow: hidden;
+            background: #000;
+            font-family: 'IBM Plex Mono', monospace;
+            touch-action: none;
+        }
+
+        #gameCanvas {
+            display: block;
+            width: 100%;
+            height: 100%;
+        }
+
+        .hud {
+            position: absolute;
+            top: 0;
+            left: 0;
+            width: 100%;
+            height: 100%;
+            pointer-events: none;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .instrument-panel {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            background: rgba(15, 23, 42, 0.9);
+            border: 2px solid #0ea5e9;
+            border-radius: 12px;
+            padding: 20px;
+            width: 280px;
+            color: #e0f2fe;
+            box-shadow: 0 0 40px rgba(14, 165, 233, 0.3), inset 0 0 20px rgba(14, 165, 233, 0.1);
+            backdrop-filter: blur(10px);
+        }
+
+        .instrument-title {
+            font-family: 'Poppins', sans-serif;
+            font-size: 14px;
+            font-weight: 700;
+            text-transform: uppercase;
+            letter-spacing: 2px;
+            color: #38bdf8;
+            margin: 12px 0 8px 0;
+            padding-bottom: 8px;
+            border-bottom: 1px solid rgba(56, 189, 248, 0.3);
+        }
+
+        .instrument-row {
+            display: flex;
+            justify-content: space-between;
+            align-items: center;
+            margin: 10px 0;
+            font-size: 13px;
+            font-weight: 500;
+        }
+
+        .instrument-label {
+            color: #7dd3fc;
+            font-size: 11px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .instrument-value {
+            color: #00ff88;
+            font-weight: 700;
+            font-size: 14px;
+            text-shadow: 0 0 8px rgba(0, 255, 136, 0.6);
+        }
+
+        .altitude-bar {
+            background: rgba(0, 0, 0, 0.4);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            height: 200px;
+            border-radius: 6px;
+            margin: 12px 0;
+            position: relative;
+            overflow: hidden;
+        }
+
+        .altitude-fill {
+            position: absolute;
+            bottom: 0;
+            width: 100%;
+            background: linear-gradient(180deg, #00ff88, #0ea5e9);
+            border-radius: 6px;
+            box-shadow: 0 0 15px rgba(14, 165, 233, 0.4);
+            transition: height 0.1s ease;
+        }
+
+        .top-hud {
+            position: absolute;
+            top: 20px;
+            left: 20px;
+            color: #e0f2fe;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .title {
+            font-size: 28px;
+            font-weight: 700;
+            color: #38bdf8;
+            letter-spacing: 2px;
+            margin-bottom: 15px;
+            text-shadow: 0 0 20px rgba(56, 189, 248, 0.5);
+        }
+
+        .flight-info {
+            background: rgba(15, 23, 42, 0.8);
+            border-left: 3px solid #0ea5e9;
+            padding: 12px 18px;
+            border-radius: 6px;
+            font-size: 12px;
+            line-height: 1.8;
+            margin-bottom: 10px;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .info-label {
+            color: #7dd3fc;
+            font-size: 10px;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+            font-weight: 600;
+        }
+
+        .info-value {
+            color: #00ff88;
+            font-weight: bold;
+        }
+
+        .top-right {
+            position: absolute;
+            top: 20px;
+            right: 20px;
+            text-align: right;
+        }
+
+        .altitude-display {
+            font-size: 32px;
+            font-weight: 700;
+            color: #00ff88;
+            text-shadow: 0 0 20px rgba(0, 255, 136, 0.6);
+            line-height: 1;
+            margin-bottom: 10px;
+        }
+
+        .altitude-unit {
+            font-size: 12px;
+            color: #7dd3fc;
+            text-transform: uppercase;
+            letter-spacing: 1px;
+        }
+
+        .controls-info {
+            position: absolute;
+            bottom: 20px;
+            right: 20px;
+            background: rgba(15, 23, 42, 0.8);
+            border: 1px solid rgba(56, 189, 248, 0.3);
+            padding: 15px 20px;
+            border-radius: 8px;
+            font-size: 11px;
+            color: #7dd3fc;
+            line-height: 1.8;
+            max-width: 220px;
+            box-shadow: 0 0 20px rgba(14, 165, 233, 0.2);
+        }
+
+        .control-item {
+            margin: 6px 0;
+        }
+
+        .control-key {
+            color: #38bdf8;
+            font-weight: bold;
+            margin-right: 8px;
+        }
+
+        .airplane-selector {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(15, 23, 42, 0.95);
+            border: 2px solid #38bdf8;
+            border-radius: 12px;
+            padding: 40px;
+            text-align: center;
+            z-index: 1000;
+            backdrop-filter: blur(10px);
+            box-shadow: 0 0 60px rgba(56, 189, 248, 0.4);
+            max-height: 90vh;
+            overflow-y: auto;
+            width: 90%;
+            max-width: 900px;
+        }
+
+        .airplane-selector h1 {
+            font-size: 32px;
+            color: #38bdf8;
+            margin-bottom: 30px;
+            font-family: 'Poppins', sans-serif;
+            letter-spacing: 2px;
+        }
+
+        .airplane-options {
+            display: grid;
+            grid-template-columns: repeat(auto-fit, minmax(180px, 1fr));
+            gap: 15px;
+            margin-bottom: 30px;
+        }
+
+        .airplane-option {
+            background: rgba(0, 0, 0, 0.4);
+            border: 2px solid rgba(56, 189, 248, 0.3);
+            border-radius: 8px;
+            padding: 15px;
+            cursor: pointer;
+            transition: all 0.3s ease;
+            color: #e0f2fe;
+            pointer-events: auto;
+        }
+
+        .airplane-option:hover {
+            border-color: #38bdf8;
+            background: rgba(56, 189, 248, 0.1);
+            transform: translateY(-5px);
+            box-shadow: 0 0 30px rgba(56, 189, 248, 0.3);
+        }
+
+        .airplane-name {
+            font-size: 16px;
+            font-weight: 700;
+            color: #38bdf8;
+            margin-bottom: 8px;
+            font-family: 'Poppins', sans-serif;
+        }
+
+        .airplane-stats {
+            font-size: 10px;
+            color: #7dd3fc;
+            line-height: 1.6;
+            text-align: left;
+        }
+
+        .mobile-controls {
+            position: absolute;
+            bottom: 20px;
+            left: 20px;
+            display: none;
+            gap: 10px;
+            z-index: 100;
+            pointer-events: auto;
+            flex-wrap: wrap;
+            width: 200px;
+        }
+
+        .mobile-button {
+            width: 50px;
+            height: 50px;
+            background: rgba(14, 165, 233, 0.6);
+            border: 2px solid #0ea5e9;
+            border-radius: 8px;
+            color: #00ff88;
+            font-size: 20px;
+            cursor: pointer;
+            display: flex;
+            align-items: center;
+            justify-content: center;
+            transition: all 0.2s ease;
+            user-select: none;
+            -webkit-user-select: none;
+            -webkit-touch-callout: none;
+            pointer-events: auto;
+        }
+
+        .mobile-button:active {
+            background: rgba(14, 165, 233, 0.9);
+            transform: scale(0.95);
+        }
+
+        .throttle-slider {
+            position: absolute;
+            bottom: 80px;
+            left: 20px;
+            width: 200px;
+            display: none;
+            pointer-events: auto;
+        }
+
+        .throttle-slider input {
+            width: 100%;
+            cursor: pointer;
+        }
+
+        .warning {
+            position: absolute;
+            top: 50%;
+            left: 50%;
+            transform: translate(-50%, -50%);
+            background: rgba(255, 50, 50, 0.8);
+            color: white;
+            padding: 20px 40px;
+            border-radius: 8px;
+            font-size: 20px;
+            z-index: 999;
+            display: none;
+            pointer-events: none;
+        }
+
+        @media (max-width: 768px) {
+            .instrument-panel {
+                width: 250px;
+                padding: 15px;
+            }
+
+            .mobile-controls {
+                display: flex;
+            }
+
+            .throttle-slider {
+                display: block;
+            }
+
+            .title {
+                font-size: 20px;
+            }
+
+            .controls-info {
+                display: none;
+            }
+        }
+
+        @media (max-width: 480px) {
+            .instrument-panel {
+                width: 200px;
+                font-size: 11px;
+                padding: 10px;
+            }
+
+            .altitude-display {
+                font-size: 24px;
+            }
+
+            .airplane-selector {
+                padding: 20px;
+                width: 95%;
+            }
+
+            .airplane-selector h1 {
+                font-size: 20px;
+                margin-bottom: 15px;
+            }
+
+            .airplane-options {
+                grid-template-columns: repeat(auto-fit, minmax(140px, 1fr));
+                gap: 10px;
+            }
+
+            .mobile-button {
+                width: 45px;
+                height: 45px;
+                font-size: 18px;
+            }
+        }
+
+        .hide {
+            display: none;
+        }
+    </style>
+</head>
+<body>
+    <canvas id="gameCanvas"></canvas>
+
+    <div class="warning" id="warning"></div>
+
+    <div class="hud">
+        <div class="airplane-selector" id="airplaneSelector">
+            <h1>✈️ SELECT YOUR AIRCRAFT</h1>
+            <div class="airplane-options" id="airplaneGrid"></div>
+        </div>
+
+        <div class="top-hud">
+            <div class="title">SKY HORIZON</div>
+            <div class="flight-info">
+                <div class="info-label">Current Aircraft</div>
+                <div class="info-value" id="planeModel">Waiting...</div>
+            </div>
+            <div class="flight-info">
+                <div class="info-label">Location</div>
+                <div class="info-value" id="locationDisplay">N/A</div>
+            </div>
+        </div>
+
+        <div class="top-right">
+            <div class="altitude-display" id="altitudeDisplay">0</div>
+            <div class="altitude-unit">feet above sea level</div>
+        </div>
+
+        <div class="instrument-panel">
+            <div class="instrument-title">Flight Status</div>
+            <div class="instrument-row">
+                <span class="instrument-label">Speed</span>
+                <span class="instrument-value" id="speedValue">0 kt</span>
+            </div>
+            <div class="instrument-row">
+                <span class="instrument-label">Heading</span>
+                <span class="instrument-value" id="headingValue">0°</span>
+            </div>
+            <div class="instrument-row">
+                <span class="instrument-label">V-Speed</span>
+                <span class="instrument-value" id="vspeedValue">0 ft/min</span>
+            </div>
+            <div class="instrument-title">Altitude Indicator</div>
+            <div class="altitude-bar">
+                <div class="altitude-fill" id="altBar" style="height: 0%"></div>
+            </div>
+            <div class="instrument-row">
+                <span class="instrument-label">Fuel</span>
+                <span class="instrument-value" id="fuelValue">100%</span>
+            </div>
+        </div>
+
+        <div class="controls-info">
+            <div class="control-item"><span class="control-key">W/S</span>Pitch</div>
+            <div class="control-item"><span class="control-key">A/D</span>Roll</div>
+            <div class="control-item"><span class="control-key">Q/E</span>Throttle</div>
+            <div class="control-item"><span class="control-key">Arrows</span>Yaw</div>
+            <div class="control-item"><span class="control-key">C</span>Camera</div>
+            <div class="control-item"><span class="control-key">R</span>Reset</div>
+        </div>
+
+        <div class="mobile-controls" id="mobileControls">
+            <button class="mobile-button" id="pitchUp">⬆️</button>
+            <button class="mobile-button" id="pitchDown">⬇️</button>
+            <button class="mobile-button" id="rollLeft">⬅️</button>
+            <button class="mobile-button" id="rollRight">➡️</button>
+            <button class="mobile-button" id="yawLeft">↙️</button>
+            <button class="mobile-button" id="yawRight">↗️</button>
+            <button class="mobile-button" id="cameraBtn">📷</button>
+            <button class="mobile-button" id="resetBtn">🔄</button>
+        </div>
+
+        <div class="throttle-slider" id="throttleSlider">
+            <label style="color: #38bdf8; font-size: 12px;">Throttle</label>
+            <input type="range" min="0" max="100" value="0" id="throttleInput">
+        </div>
+    </div>
+
+    <script src="https://unpkg.com/three@r128/build/three.min.js"></script>
+
+    <script>
+        // Detect device
+        const isMobile = /Android|webOS|iPhone|iPad|iPod|BlackBerry|IEMobile|Opera Mini/i.test(navigator.userAgent);
+
+        // Show mobile controls if needed
+        if (isMobile) {
+            document.getElementById('mobileControls').style.display = 'flex';
+        }
+
+        // Aircraft database - 15+ different aircraft
+        const aircraftDatabase = [
+            // Large Commercial
+            {
+                id: 'boeing747',
+                name: 'Boeing 747',
+                type: 'Heavy Transport',
+                maxSpeed: 490,
+                maxAltitude: 45000,
+                throttleScale: 1.0,
+                mass: 1.0,
+                drag: 0.03,
+                color: 0x4a90e2,
+                scale: 80,
+                icon: '✈️'
+            },
+            {
+                id: 'airbus380',
+                name: 'Airbus A380',
+                type: 'Modern Jumbo',
+                maxSpeed: 490,
+                maxAltitude: 43000,
+                throttleScale: 1.0,
+                mass: 1.05,
+                drag: 0.032,
+                color: 0x2ecc71,
+                scale: 85,
+                icon: '✈️'
+            },
+            {
+                id: 'boeing777',
+                name: 'Boeing 777',
+                type: 'Wide Body',
+                maxSpeed: 512,
+                maxAltitude: 43000,
+                throttleScale: 0.95,
+                mass: 0.95,
+                drag: 0.028,
+                color: 0x3498db,
+                scale: 70,
+                icon: '✈️'
+            },
+            {
+                id: 'airbus350',
+                name: 'Airbus A350',
+                type: 'Modern Transport',
+                maxSpeed: 500,
+                maxAltitude: 43000,
+                throttleScale: 0.92,
+                mass: 0.92,
+                drag: 0.025,
+                color: 0x1abc9c,
+                scale: 65,
+                icon: '✈️'
+            },
+            // Regional/Medium
+            {
+                id: 'boeing737',
+                name: 'Boeing 737',
+                type: 'Narrow Body',
+                maxSpeed: 460,
+                maxAltitude: 41000,
+                throttleScale: 0.85,
+                mass: 0.75,
+                drag: 0.022,
+                color: 0xe74c3c,
+                scale: 50,
+                icon: '✈️'
+            },
+            {
+                id: 'airbus320',
+                name: 'Airbus A320',
+                type: 'Workhorse',
+                maxSpeed: 450,
+                maxAltitude: 43000,
+                throttleScale: 0.83,
+                mass: 0.73,
+                drag: 0.021,
+                color: 0xf39c12,
+                scale: 48,
+                icon: '✈️'
+            },
+            {
+                id: 'bombardier',
+                name: 'Bombardier CRJ',
+                type: 'Regional Jet',
+                maxSpeed: 450,
+                maxAltitude: 41000,
+                throttleScale: 0.78,
+                mass: 0.6,
+                drag: 0.019,
+                color: 0x9b59b6,
+                scale: 40,
+                icon: '✈️'
+            },
+            // Light Aircraft
+            {
+                id: 'cessna172',
+                name: 'Cessna 172',
+                type: 'Light GA',
+                maxSpeed: 124,
+                maxAltitude: 14000,
+                throttleScale: 0.5,
+                mass: 0.3,
+                drag: 0.01,
+                color: 0xf39c12,
+                scale: 15,
+                icon: '✈️'
+            },
+            {
+                id: 'piper',
+                name: 'Piper Cub',
+                type: 'Classic GA',
+                maxSpeed: 100,
+                maxAltitude: 12000,
+                throttleScale: 0.45,
+                mass: 0.25,
+                drag: 0.008,
+                color: 0xe67e22,
+                scale: 12,
+                icon: '✈️'
+            },
+            {
+                id: 'cirrus',
+                name: 'Cirrus SR22',
+                type: 'Modern GA',
+                maxSpeed: 160,
+                maxAltitude: 17000,
+                throttleScale: 0.6,
+                mass: 0.35,
+                drag: 0.012,
+                color: 0x16a085,
+                scale: 18,
+                icon: '✈️'
+            },
+            // Super Sonic
+            {
+                id: 'concorde',
+                name: 'Concorde',
+                type: 'Supersonic',
+                maxSpeed: 1354,
+                maxAltitude: 59000,
+                throttleScale: 1.5,
+                mass: 0.95,
+                drag: 0.05,
+                color: 0xff1744,
+                scale: 70,
+                icon: '🚀'
+            },
+            // Modern Military
+            {
+                id: 'f16',
+                name: 'F-16 Fighter',
+                type: 'Fighter Jet',
+                maxSpeed: 1190,
+                maxAltitude: 50000,
+                throttleScale: 1.3,
+                mass: 0.5,
+                drag: 0.04,
+                color: 0x34495e,
+                scale: 35,
+                icon: '🛩️'
+            },
+            {
+                id: 'c130',
+                name: 'C-130 Hercules',
+                type: 'Military Transport',
+                maxSpeed: 320,
+                maxAltitude: 33000,
+                throttleScale: 0.9,
+                mass: 1.2,
+                drag: 0.04,
+                color: 0x2c3e50,
+                scale: 75,
+                icon: '✈️'
+            },
+            // Private Jets
+            {
+                id: 'gulfstream',
+                name: 'Gulfstream G650',
+                type: 'Private Jet',
+                maxSpeed: 704,
+                maxAltitude: 43000,
+                throttleScale: 0.95,
+                mass: 0.65,
+                drag: 0.018,
+                color: 0xd4af37,
+                scale: 45,
+                icon: '💎'
+            },
+            {
+                id: 'citation',
+                name: 'Cessna Citation',
+                type: 'Business Jet',
+                maxSpeed: 483,
+                maxAltitude: 37000,
+                throttleScale: 0.85,
+                mass: 0.55,
+                drag: 0.016,
+                color: 0x2980b9,
+                scale: 38,
+                icon: '✈️'
+            },
+            // Cargo
+            {
+                id: 'airbus300',
+                name: 'Airbus Beluga',
+                type: 'Cargo Transport',
+                maxSpeed: 450,
+                maxAltitude: 43000,
+                throttleScale: 0.9,
+                mass: 1.15,
+                drag: 0.035,
+                color: 0xecf0f1,
+                scale: 90,
+                icon: '📦'
+            }
+        ];
+
+        // Scene setup
+        const scene = new THREE.Scene();
+        const camera = new THREE.PerspectiveCamera(75, window.innerWidth / window.innerHeight, 0.1, 500000);
+        const renderer = new THREE.WebGLRenderer({ antialias: true, canvas: document.getElementById('gameCanvas') });
+        renderer.setSize(window.innerWidth, window.innerHeight);
+        renderer.shadowMap.enabled = true;
+        renderer.fog = new THREE.Fog(0x87ceeb, 10000, 500000);
+
+        // Sky
+        const skyGeometry = new THREE.SphereGeometry(400000, 64, 64);
+        const skyMaterial = new THREE.MeshBasicMaterial({ color: 0x87ceeb, side: THREE.BackSide });
+        const sky = new THREE.Mesh(skyGeometry, skyMaterial);
+        scene.add(sky);
+
+        // Lighting
+        const ambientLight = new THREE.AmbientLight(0xffffff, 0.6);
+        scene.add(ambientLight);
+
+        const sunLight = new THREE.DirectionalLight(0xffffff, 0.9);
+        sunLight.position.set(200000, 150000, 200000);
+        sunLight.castShadow = true;
+        sunLight.shadow.mapSize.width = 4096;
+        sunLight.shadow.mapSize.height = 4096;
+        sunLight.shadow.camera.far = 500000;
+        sunLight.shadow.camera.left = -100000;
+        sunLight.shadow.camera.right = 100000;
+        sunLight.shadow.camera.top = 100000;
+        sunLight.shadow.camera.bottom = -100000;
+        scene.add(sunLight);
+
+        // Terrain with collision
+        const terrainGeometry = new THREE.PlaneGeometry(100000, 100000, 200, 200);
+        const terrainMaterial = new THREE.MeshStandardMaterial({ color: 0x2d5016, roughness: 0.8 });
+
+        const vertices = terrainGeometry.attributes.position.array;
+        const terrainHeights = {};
+        for (let i = 0; i < vertices.length; i += 3) {
+            const x = Math.round(vertices[i] / 100);
+            const z = Math.round(vertices[i + 2] / 100);
+            const key = `${x},${z}`;
+            const noise = Math.sin(x * 0.0001) * 500 + Math.cos(z * 0.0001) * 500 + Math.sin((x + z) * 0.00005) * 1000;
+            vertices[i + 1] = Math.max(0, noise);
+            terrainHeights[key] = Math.max(0, noise);
+        }
+        terrainGeometry.attributes.position.needsUpdate = true;
+        terrainGeometry.computeVertexNormals();
+
+        const terrain = new THREE.Mesh(terrainGeometry, terrainMaterial);
+        terrain.rotation.x = -Math.PI / 2;
+        terrain.receiveShadow = true;
+        scene.add(terrain);
+
+        // Water
+        const waterGeometry = new THREE.PlaneGeometry(100000, 100000);
+        const waterMaterial = new THREE.MeshStandardMaterial({ color: 0x1a4d7a, roughness: 0.2, metalness: 0.5 });
+        const water = new THREE.Mesh(waterGeometry, waterMaterial);
+        water.rotation.x = -Math.PI / 2;
+        water.position.y = -100;
+        scene.add(water);
+
+        // Game state
+        let selectedPlane = null;
+        let airplane = null;
+        let gameStarted = false;
+        let cameraMode = 0;
+
+        const keys = {};
+
+        // Populate aircraft selector
+        function initAircraftSelector() {
+            const grid = document.getElementById('airplaneGrid');
+            grid.innerHTML = '';
+
+            aircraftDatabase.forEach(aircraft => {
+                const option = document.createElement('div');
+                option.className = 'airplane-option';
+                option.innerHTML = `
+                    <div class="airplane-name">${aircraft.icon} ${aircraft.name}</div>
+                    <div class="airplane-stats">
+                        <div>Type: ${aircraft.type}</div>
+                        <div>Max Speed: ${aircraft.maxSpeed} kt</div>
+                        <div>Ceiling: ${aircraft.maxAltitude.toLocaleString()} ft</div>
+                    </div>
+                `;
+                option.addEventListener('click', () => {
+                    selectedPlane = aircraft.id;
+                    document.getElementById('airplaneSelector').classList.add('hide');
+                    startGame();
+                });
+                grid.appendChild(option);
+            });
+        }
+
+        function createAirplane(id) {
+            const specs = aircraftDatabase.find(p => p.id === id);
+            if (!specs) return null;
+
+            const fuselageGeometry = new THREE.CylinderGeometry(8, 8, 120, 16);
+            const fuselageMaterial = new THREE.MeshStandardMaterial({
+                color: specs.color,
+                roughness: 0.3,
+                metalness: 0.8,
+                emissive: specs.color,
+                emissiveIntensity: 0.15
+            });
+            const fuselage = new THREE.Mesh(fuselageGeometry, fuselageMaterial);
+            fuselage.castShadow = true;
+            fuselage.receiveShadow = true;
+
+            const wingsGeometry = new THREE.BoxGeometry(200, 4, 40);
+            const wings = new THREE.Mesh(wingsGeometry, fuselageMaterial);
+            wings.castShadow = true;
+
+            const tailGeometry = new THREE.BoxGeometry(80, 4, 20);
+            const tail = new THREE.Mesh(tailGeometry, fuselageMaterial);
+            tail.position.z = -60;
+            tail.castShadow = true;
+
+            const cockpitGeometry = new THREE.SphereGeometry(10, 8, 8);
+            const cockpitMaterial = new THREE.MeshStandardMaterial({ color: 0x1a1a2e, roughness: 0.4, metalness: 0.7 });
+            const cockpit = new THREE.Mesh(cockpitGeometry, cockpitMaterial);
+            cockpit.position.z = 45;
+            cockpit.position.y = 12;
+            cockpit.castShadow = true;
+
+            const group = new THREE.Group();
+            group.add(fuselage, wings, tail, cockpit);
+            group.scale.set(specs.scale, specs.scale, specs.scale);
+            group.position.set(0, 5000, 0);
+
+            return {
+                group: group,
+                specs: specs,
+                velocity: new THREE.Vector3(0, 0, 0),
+                pitch: 0,
+                roll: 0,
+                yaw: 0,
+                throttle: 0,
+                speed: 0,
+                altitude: 5000,
+                fuel: 100,
+                gear: false,
+                lastTerrainHeight: 0
+            };
+        }
+
+        function startGame() {
+            gameStarted = true;
+            if (airplane && airplane.group) scene.remove(airplane.group);
+            airplane = createAirplane(selectedPlane);
+            if (airplane) {
+                scene.add(airplane.group);
+                camera.position.set(0, 5100, 200);
+                const specs = aircraftDatabase.find(p => p.id === selectedPlane);
+                document.getElementById('planeModel').textContent = specs.name;
+            }
+        }
+
+        function getTerrainHeight(x, z) {
+            const key = `${Math.round(x / 100)},${Math.round(z / 100)}`;
+            return terrainHeights[key] || 0;
+        }
+
+        function updateAirplane() {
+            if (!airplane) return;
+
+            // Controls
+            if (keys['w'] || keys['W']) airplane.pitch = Math.min(0.5, airplane.pitch + 0.02);
+            if (keys['s'] || keys['S']) airplane.pitch = Math.max(-0.5, airplane.pitch - 0.02);
+            if (keys['a'] || keys['A']) airplane.roll = Math.max(-0.8, airplane.roll - 0.02);
+            if (keys['d'] || keys['D']) airplane.roll = Math.min(0.8, airplane.roll + 0.02);
+            if (keys['q'] || keys['Q']) airplane.throttle = Math.max(0, airplane.throttle - 0.02);
+            if (keys['e'] || keys['E']) airplane.throttle = Math.min(1, airplane.throttle + 0.02);
+
+            airplane.pitch *= 0.95;
+            airplane.roll *= 0.92;
+
+            airplane.speed = airplane.throttle * airplane.specs.maxSpeed * 0.1;
+            const drag = 1 - (airplane.specs.drag * airplane.altitude / 50000);
+            airplane.speed *= drag;
+
+            const verticalAccel = (Math.sin(airplane.pitch) * airplane.speed * 0.01) - (airplane.altitude / 10000) * 0.05;
+            airplane.altitude += verticalAccel;
+
+            const forward = new THREE.Vector3(0, 0, -1);
+            const rotationMatrix = new THREE.Matrix4();
+            rotationMatrix.makeRotationOrder('YXZ', airplane.yaw, airplane.pitch, airplane.roll);
+            forward.applyMatrix4(rotationMatrix);
+
+            airplane.group.position.add(forward.multiplyScalar(airplane.speed * 0.1));
+
+            // Collision detection
+            const terrainHeight = getTerrainHeight(airplane.group.position.x, airplane.group.position.z);
+            airplane.lastTerrainHeight = terrainHeight;
+
+            if (airplane.altitude <= terrainHeight + 50) {
+                airplane.altitude = Math.max(terrainHeight + 50, airplane.altitude);
+                airplane.group.position.y = airplane.altitude;
+                showWarning('⚠️ TERRAIN COLLISION!');
+            } else {
+                airplane.group.position.y = airplane.altitude;
+            }
+
+            airplane.altitude = Math.max(terrainHeight + 50, Math.min(airplane.altitude, airplane.specs.maxAltitude));
+            airplane.fuel = Math.max(0, airplane.fuel - airplane.throttle * 0.05);
+            if (airplane.fuel === 0) airplane.throttle = 0;
+
+            airplane.group.rotation.order = 'YXZ';
+            airplane.group.rotation.x = airplane.pitch;
+            airplane.group.rotation.z = airplane.roll;
+            airplane.group.rotation.y += (keys['ArrowLeft'] ? 0.02 : 0) - (keys['ArrowRight'] ? 0.02 : 0);
+            airplane.yaw = airplane.group.rotation.y;
+        }
+
+        function updateHUD() {
+            if (!airplane) return;
+            document.getElementById('altitudeDisplay').textContent = Math.round(airplane.altitude);
+            document.getElementById('speedValue').textContent = Math.round(airplane.speed) + ' kt';
+            document.getElementById('headingValue').textContent = Math.round((airplane.yaw * 180 / Math.PI + 360) % 360) + '°';
+            document.getElementById('vspeedValue').textContent = Math.round(Math.sin(airplane.pitch) * airplane.speed * 100) + ' ft/min';
+            document.getElementById('altBar').style.height = Math.min(100, (airplane.altitude / airplane.specs.maxAltitude) * 100) + '%';
+            document.getElementById('fuelValue').textContent = Math.round(airplane.fuel) + '%';
+            const x = Math.round(airplane.group.position.x / 1000);
+            const z = Math.round(airplane.group.position.z / 1000);
+            document.getElementById('locationDisplay').textContent = `(${x}, ${z})`;
+        }
+
+        function updateCamera() {
+            if (!airplane) return;
+            const pos = airplane.group.position;
+            let offset = new THREE.Vector3(0, 60, 200);
+
+            if (cameraMode === 1) {
+                offset.set(0, 40, 30);
+            } else if (cameraMode === 2) {
+                offset.set(0, 100, 0);
+            }
+
+            offset.applyAxisAngle(new THREE.Vector3(0, 1, 0), airplane.yaw);
+            offset.applyAxisAngle(new THREE.Vector3(1, 0, 0), airplane.pitch);
+
+            const targetPos = new THREE.Vector3().addVectors(pos, offset);
+            camera.position.lerp(targetPos, 0.1);
+            camera.lookAt(pos.clone().add(new THREE.Vector3(0, 30, 0)));
+        }
+
+        function showWarning(msg) {
+            const warning = document.getElementById('warning');
+            warning.textContent = msg;
+            warning.style.display = 'block';
+            setTimeout(() => { warning.style.display = 'none'; }, 2000);
+        }
+
+        // Keyboard input
+        document.addEventListener('keydown', (e) => {
+            keys[e.key] = true;
+            if (e.key.toLowerCase() === 'r') {
+                if (airplane) {
+                    airplane.group.position.set(0, 5000, 0);
+                    airplane.velocity.set(0, 0, 0);
+                    airplane.pitch = 0;
+                    airplane.roll = 0;
+                    airplane.yaw = 0;
+                    airplane.throttle = 0;
+                    airplane.altitude = 5000;
+                }
+            }
+            if (e.key.toLowerCase() === 'c') {
+                cameraMode = (cameraMode + 1) % 3;
+            }
+        });
+
+        document.addEventListener('keyup', (e) => {
+            keys[e.key] = false;
+        });
+
+        // Mobile button controls
+        if (isMobile) {
+            document.getElementById('pitchUp').addEventListener('touchstart', (e) => { e.preventDefault(); keys['w'] = true; });
+            document.getElementById('pitchUp').addEventListener('touchend', (e) => { e.preventDefault(); keys['w'] = false; });
+            document.getElementById('pitchDown').addEventListener('touchstart', (e) => { e.preventDefault(); keys['s'] = true; });
+            document.getElementById('pitchDown').addEventListener('touchend', (e) => { e.preventDefault(); keys['s'] = false; });
+            document.getElementById('rollLeft').addEventListener('touchstart', (e) => { e.preventDefault(); keys['a'] = true; });
+            document.getElementById('rollLeft').addEventListener('touchend', (e) => { e.preventDefault(); keys['a'] = false; });
+            document.getElementById('rollRight').addEventListener('touchstart', (e) => { e.preventDefault(); keys['d'] = true; });
+            document.getElementById('rollRight').addEventListener('touchend', (e) => { e.preventDefault(); keys['d'] = false; });
+            document.getElementById('yawLeft').addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowLeft'] = true; });
+            document.getElementById('yawLeft').addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowLeft'] = false; });
+            document.getElementById('yawRight').addEventListener('touchstart', (e) => { e.preventDefault(); keys['ArrowRight'] = true; });
+            document.getElementById('yawRight').addEventListener('touchend', (e) => { e.preventDefault(); keys['ArrowRight'] = false; });
+            document.getElementById('cameraBtn').addEventListener('click', () => {
+                cameraMode = (cameraMode + 1) % 3;
+            });
+            document.getElementById('resetBtn').addEventListener('click', () => {
+                if (airplane) {
+                    airplane.group.position.set(0, 5000, 0);
+                    airplane.pitch = 0;
+                    airplane.roll = 0;
+                    airplane.yaw = 0;
+                    airplane.throttle = 0;
+                    airplane.altitude = 5000;
+                }
+            });
+
+            document.getElementById('throttleInput').addEventListener('input', (e) => {
+                if (airplane) airplane.throttle = e.target.value / 100;
+            });
+        }
+
+        // Animation loop
+        function animate() {
+            requestAnimationFrame(animate);
+            if (gameStarted && airplane) {
+                updateAirplane();
+                updateCamera();
+                updateHUD();
+            }
+            renderer.render(scene, camera);
+        }
+
+        window.addEventListener('resize', () => {
+            camera.aspect = window.innerWidth / window.innerHeight;
+            camera.updateProjectionMatrix();
+            renderer.setSize(window.innerWidth, window.innerHeight);
+        });
+
+        // Initialize
+        initAircraftSelector();
+        animate();
+    </script>
+</body>
+</html>
